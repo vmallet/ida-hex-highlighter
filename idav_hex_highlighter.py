@@ -8,7 +8,7 @@ import ida_lines
 
 import LruCache
 # TODO: do not depend on idav_hex_treeview (move common dependencies out)
-import idav_hex_treeview
+from idav_hex_util import map_citems_to_lines, PseudocodeHighlighter
 import idav_state
 
 ACTION_HIGHLIGHTER = "idav:toggle-highlighter"
@@ -106,8 +106,8 @@ class BlockHighlighter(object):
         ida_kernwin.refresh_idaview_anyway()
 
     def _create_highlighter(self, cfunc):
-        h = idav_hex_treeview.PseudocodeHighlighter(
-            cfunc.entry_ea, idav_hex_treeview.map_citems_to_lines(cfunc), ida_kernwin.CK_EXTRA14)
+        h = PseudocodeHighlighter(cfunc.entry_ea, map_citems_to_lines(cfunc),
+                                  ida_kernwin.CK_EXTRA14)
         h.hook()
         return h
 
