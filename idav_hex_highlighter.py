@@ -16,17 +16,15 @@ ACTION_HIGHLIGHTER = "idav:toggle-highlighter"
 
 # TODO: sub_51179B4
 
-# TODO: global is a bit hacky here I think?
-plugin_active = True
-
 class HighlighterHandler(ida_kernwin.action_handler_t):
-    def __init__(self):
+    def __init__(self, block_highlighter):
+        self.block_highlighter = block_highlighter
         ida_kernwin.action_handler_t.__init__(self)
 
     def activate(self, ctx) -> int:
-        global plugin_active
-        plugin_active = not plugin_active
-        print("Highlighter {}".format("ON" if plugin_active else "FALSE"))
+        self.block_highlighter.toggle_enabled()
+        plugin_active = self.block_highlighter.enabled
+        print("Highlighter {}".format("ON" if plugin_active else "OFF"))
         return 0
 
     # This action is only available in pseudocode widget
@@ -77,10 +75,6 @@ class PseudocodeHighlighter(object):
 
         vu = ida_hexrays.get_widget_vdui(widget)
         if vu.cfunc.entry_ea != self.entry_ea:
-            return
-
-        # TODO: hack:
-        if not plugin_active:
             return
 
         color = ida_kernwin.CK_EXTRA14  # + self.n  # TODO: make color configurable
@@ -157,6 +151,7 @@ class BlockHighlighter(object):
         self.hooks.populating_popup = self._populating_popup
         self.hooks.refresh_pseudocode = self._refresh_pseudocode
         self.hooks.curpos = self._curpos
+        self.enabled = True
 
     def _populating_popup(self, widget, handle, vu):
         ida_kernwin.attach_action_to_popup(vu.ct, None, ACTION_HIGHLIGHTER)
@@ -164,6 +159,8 @@ class BlockHighlighter(object):
 
     def _refresh_pseudocode(self, vu) -> int:
         """Pseudocode has been refreshed: time to reset our existing highlighter"""
+        if not self.enabled:
+            return 0
         current = None
         highlighter = self.highlighters.remove(vu.cfunc.entry_ea)
         if highlighter:
@@ -174,6 +171,8 @@ class BlockHighlighter(object):
         return 0
 
     def _curpos(self, vu) -> int:
+        if not self.enabled:
+            return 0
         citem = vu.item.it if vu.item.is_citem() else None
         if not citem:
             return 0
@@ -203,6 +202,16 @@ class BlockHighlighter(object):
         h.hook()
         return h
 
+    def toggle_enabled(self):
+        """Toggle the enabled state of this plugin"""
+        self.enable(not self.enabled)
+
+    def enable(self, enabled):
+        """Enable/disable this plugin"""
+        self.enabled = enabled
+        if not enabled:
+            self.clear()
+
     def hook(self):
         self.hooks.hook()
 
@@ -231,14 +240,16 @@ def v_register_highlighter(debug=False):
     if debug:
         print("CTreeViewer: Unregistering {}: {}".format(ACTION_HIGHLIGHTER, ret))
 
+    block_highlighter = BlockHighlighter()
+
     action_desc = ida_kernwin.action_desc_t(
-        ACTION_HIGHLIGHTER, 'Highlighting on/off', HighlighterHandler())
+        ACTION_HIGHLIGHTER, 'Highlighting on/off', HighlighterHandler(block_highlighter))
 
     ret = ida_kernwin.register_action(action_desc)
     if debug:
         print("Registering {}: {}".format(ACTION_HIGHLIGHTER, ret))
 
-    idav_state.hex_highlighter = BlockHighlighter()
+    idav_state.hex_highlighter = block_highlighter
     idav_state.hex_highlighter.hook()
 
     print("Highlighter: None")
