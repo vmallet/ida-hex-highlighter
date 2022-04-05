@@ -6,7 +6,7 @@ import ida_hexrays
 import ida_kernwin
 import ida_lines
 
-import LruCache
+import lru_cache
 # TODO: do not depend on idav_hex_treeview (move common dependencies out)
 from idav_hex_util import map_citems_to_lines, PseudocodeHighlighter
 import idav_state
@@ -53,7 +53,8 @@ class BlockHighlighter(object):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.highlighters = LruCache.LruCache(max_size=3)
+        # entry_ea => PseudocodeHighlighter
+        self.highlighters = lru_cache.LruCache(max_size=3)
 
         self.hooks = BlockHighlighter._Hooks()
         self.hooks.populating_popup = self._populating_popup
