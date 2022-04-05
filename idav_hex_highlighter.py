@@ -1,5 +1,5 @@
 """
-IDA plugin used to highlight code blocks in pseudocode windows.
+IDA action used to highlight code blocks in pseudocode windows.
 """
 
 import ida_hexrays
@@ -7,12 +7,13 @@ import ida_kernwin
 import ida_lines
 
 import lru_cache
-# TODO: do not depend on idav_hex_treeview (move common dependencies out)
 from idav_hex_util import map_citems_to_lines, PseudocodeHighlighter
 import idav_state
 
 ACTION_HIGHLIGHTER = "idav:toggle-highlighter"
 
+# Number of PseudocodeHighlighters to keep cached when navigating through functions
+CACHED_HIGHLIGHTERS = 20
 # TODO: sub_51179B4
 
 class HighlighterHandler(ida_kernwin.action_handler_t):
@@ -54,7 +55,7 @@ class BlockHighlighter(object):
     def __init__(self, *args):
         super().__init__(*args)
         # entry_ea => PseudocodeHighlighter
-        self.highlighters = lru_cache.LruCache(max_size=3)
+        self.highlighters = lru_cache.LruCache(max_size=CACHED_HIGHLIGHTERS)
 
         self.hooks = BlockHighlighter._Hooks()
         self.hooks.populating_popup = self._populating_popup
@@ -63,23 +64,28 @@ class BlockHighlighter(object):
         self.enabled = True
 
     def _populating_popup(self, widget, handle, vu):
+        """hex-rays callback: time to inject our action into the popup."""
         ida_kernwin.attach_action_to_popup(vu.ct, None, ACTION_HIGHLIGHTER)
         return 0
 
     def _refresh_pseudocode(self, vu) -> int:
-        """Pseudocode has been refreshed: time to reset our existing highlighter"""
+        """
+        hex-rays callback: Pseudocode has been refreshed: time to reset
+        our existing highlighter.
+        """
         if not self.enabled:
             return 0
         current = None
         highlighter = self.highlighters.remove(vu.cfunc.entry_ea)
         if highlighter:
-            highlighter.unhook()
             current = highlighter.current
+            highlighter.unhook()
         if current:
             self._set_current(vu.cfunc, current)
         return 0
 
     def _curpos(self, vu) -> int:
+        """hex-rays callback: cursor position has changed."""
         if not self.enabled:
             return 0
         citem = vu.item.it if vu.item.is_citem() else None
@@ -89,12 +95,10 @@ class BlockHighlighter(object):
                             ida_hexrays.cit_do, ida_hexrays.cit_while):
             return 0
 
+        # only update if the cursor is on an actual keyword in the current line
         cpos = vu.cpos
         line = vu.cfunc.get_pseudocode()[cpos.lnnum]
         txt = ida_lines.tag_remove(line.line)
-        print("line: {}, ch: {}".format(txt, txt[cpos.x]))
-
-        # only update if the cursor is on an actual keyword
         if not 'a' <= txt[cpos.x] <= 'z':
             return 0
 
@@ -102,11 +106,13 @@ class BlockHighlighter(object):
         return 1
 
     def _set_current(self, cfunc, citem):
+        """Set the current citem whole block is to be highlighted."""
         high = self.highlighters.get(cfunc.entry_ea, lambda: self._create_highlighter(cfunc))
         high.set_current(citem, include_children=True)
         ida_kernwin.refresh_idaview_anyway()
 
     def _create_highlighter(self, cfunc):
+        """Instantiate a PseudocodeHighlighter for the given cfunc."""
         h = PseudocodeHighlighter(cfunc.entry_ea, map_citems_to_lines(cfunc),
                                   ida_kernwin.CK_EXTRA14)
         h.hook()
@@ -120,23 +126,24 @@ class BlockHighlighter(object):
         """Enable/disable this plugin"""
         self.enabled = enabled
         if not enabled:
-            self.clear()
+            self._clear()
 
     def hook(self):
         self.hooks.hook()
 
     def unhook(self) -> bool:
-        self.clear()
+        self._clear()
         return self.hooks.unhook()
 
-    def clear(self):
+    def _clear(self):
+        """Clear and unhook all highlighters."""
         for h in self.highlighters.values():
             h.unhook()
         self.highlighters.clear()
 
 
 def v_register_highlighter(debug=False):
-    """Register the pseudocode highlighter action"""
+    """Register the pseudocode highlighter action."""
 
     if not ida_hexrays.init_hexrays_plugin():
         print("No hexrays -> no highlighter for you!")
