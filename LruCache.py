@@ -103,7 +103,8 @@ class LruCache(object):
         self.nodes[key] = self.list.insert_head(key, value)
 
     def info(self):
-        return "len: {}  hits: {}  misses: {}".format(self.list.length, self.hits, self.misses)
+        return "len: {}  hits: {}  misses: {}".format(
+            self.list.length, self.hits, self.misses)
 
     def values(self):
         return [node.value for node in self.nodes.values()]

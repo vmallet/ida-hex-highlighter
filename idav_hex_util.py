@@ -30,13 +30,17 @@ def map_citems_to_lines(cfunc: ida_hexrays.cfunc_t) -> Dict[int, Set[int]]:
             lines_by_index[index].add(line)
 
     # rekey the map with citem.obj_id before returning it
-    # Note: some indices are actually for things other than citems and need to be filtered out (when >= len(citems))
+    # Note: some indices are actually for things other than citems and need to
+    # be filtered out (when >= len(citems))
     max_idx = len(citems)
-    return { citems[index].obj_id: lines for index, lines in lines_by_index.items() if index < max_idx}
+    return { citems[index].obj_id: lines
+             for index, lines in lines_by_index.items()
+             if index < max_idx }
 
 
 class PseudocodeHighlighter(object):
-    """An object that will highlight lines in the pseudocode that correspond to a specific citem in the ctree."""
+    """An object that will highlight lines in the pseudocode that
+    correspond to a specific citem in the ctree."""
 
     NO_LINES = set()
 
@@ -68,8 +72,10 @@ class PseudocodeHighlighter(object):
         self.ui_hooks = None
 
     def _maybe_highlight_lines(self, lines_out, widget, lines_in) -> None:
-        """Handle the get_lines_rendering_info event and decorate active lines if it's the right pseudocode widget"""
-        if ida_kernwin.get_widget_type(widget) != ida_kernwin.BWN_PSEUDOCODE or not self.lines:
+        """Handle the get_lines_rendering_info event and decorate
+        active lines if it's the right pseudocode widget."""
+        if ida_kernwin.get_widget_type(widget) != ida_kernwin.BWN_PSEUDOCODE \
+                or not self.lines:
             return
         vu = ida_hexrays.get_widget_vdui(widget)
         if vu.cfunc.entry_ea != self.cfunc_ea:
@@ -78,7 +84,8 @@ class PseudocodeHighlighter(object):
         for line in lines_in.sections_lines[0]:  # TODO: understand what it means if there's more than 1 section
             splace = ida_kernwin.place_t_as_simpleline_place_t(line.at)
             if splace.n in self.lines:
-                entry = ida_kernwin.line_rendering_output_entry_t(line, ida_kernwin.LROEF_FULL_LINE, self.bg_color)
+                entry = ida_kernwin.line_rendering_output_entry_t(
+                    line, ida_kernwin.LROEF_FULL_LINE, self.bg_color)
                 lines_out.entries.push_back(entry)
 
     def _set_active_lines(self, lines: Set[int]):
@@ -121,7 +128,8 @@ class PseudocodeHighlighter(object):
                 return self._visit_item(expr)
 
             def _visit_item(self, item) -> int:
-                self.lines.update(self.line_map.get(item.obj_id, PseudocodeHighlighter.NO_LINES))
+                self.lines.update(
+                    self.line_map.get(item.obj_id, PseudocodeHighlighter.NO_LINES))
                 return 0
 
         collector = line_collector(self.line_map)

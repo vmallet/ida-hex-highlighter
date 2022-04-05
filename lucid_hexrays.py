@@ -5,7 +5,8 @@ import ida_lines
 import ida_hexrays
 
 """
-Two functions taken with gratitude (with minor modifications) from the Lucid project by Markus Gaasedelen.
+Two functions taken with gratitude (with minor modifications) from the 
+Lucid project by Markus Gaasedelen.
 
 Credit: (c) 2020 Markus Gaasedelen
 License: MIT License: https://github.com/gaasedelen/lucid/blob/master/LICENSE
