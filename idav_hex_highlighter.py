@@ -8,13 +8,13 @@ import ida_lines
 
 import lru_cache
 from idav_hex_util import map_citems_to_lines, PseudocodeHighlighter
-import idav_state
 
-ACTION_HIGHLIGHTER = "idav:toggle-highlighter"
+HIGHLIGHTER_ACTION = "idav:toggle-highlighter"
+HIGHLIGHTER_TEXT = "Highlighting on/off"
+HIGHLIGHTER_SHORTCUT = None
 
 # Number of PseudocodeHighlighters to keep cached when navigating through functions
 CACHED_HIGHLIGHTERS = 20
-# TODO: sub_51179B4
 
 class HighlighterHandler(ida_kernwin.action_handler_t):
     def __init__(self, block_highlighter):
@@ -65,7 +65,7 @@ class BlockHighlighter(object):
 
     def _populating_popup(self, widget, handle, vu):
         """hex-rays callback: time to inject our action into the popup."""
-        ida_kernwin.attach_action_to_popup(vu.ct, None, ACTION_HIGHLIGHTER)
+        ida_kernwin.attach_action_to_popup(vu.ct, None, HIGHLIGHTER_ACTION)
         return 0
 
     def _refresh_pseudocode(self, vu) -> int:
@@ -143,31 +143,23 @@ class BlockHighlighter(object):
         self.highlighters.clear()
 
 
-def v_register_highlighter(debug=False):
-    """Register the pseudocode highlighter action."""
+def partial_init(debug=False):
+    """Register actions, return hooks and actions."""
 
-    if not ida_hexrays.init_hexrays_plugin():
-        print("No hexrays -> no highlighter for you!")
-        return
-
-    if idav_state.hex_highlighter:
-        idav_state.hex_highlighter.unhook()
-        idav_state.hex_highlighter = None
-
-    ret = ida_kernwin.unregister_action(ACTION_HIGHLIGHTER)
+    ret = ida_kernwin.unregister_action(HIGHLIGHTER_ACTION)
     if debug:
-        print("CTreeViewer: Unregistering {}: {}".format(ACTION_HIGHLIGHTER, ret))
+        print("CTreeViewer: Unregistering {}: {}".format(HIGHLIGHTER_ACTION, ret))
 
     block_highlighter = BlockHighlighter()
 
     action_desc = ida_kernwin.action_desc_t(
-        ACTION_HIGHLIGHTER, 'Highlighting on/off', HighlighterHandler(block_highlighter))
+        HIGHLIGHTER_ACTION,
+        HIGHLIGHTER_TEXT,
+        HighlighterHandler(block_highlighter),
+        HIGHLIGHTER_SHORTCUT)
 
     ret = ida_kernwin.register_action(action_desc)
     if debug:
-        print("Registering {}: {}".format(ACTION_HIGHLIGHTER, ret))
+        print("Registering {}: {}".format(HIGHLIGHTER_ACTION, ret))
 
-    idav_state.hex_highlighter = block_highlighter
-    idav_state.hex_highlighter.hook()
-
-    print("Highlighter: None")
+    return block_highlighter, [ action_desc ]
