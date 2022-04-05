@@ -40,7 +40,7 @@ class BlockHighlighter(object):
 
     BlockHighlighter attempts to maintain a PseudocodeHighlighter per
     highlightable cfunc and updates the highlighted block when the
-    cursor visits a block keyword (i.e. if, for, do, while).
+    cursor visits a block keyword (i.e. if, for, do, while, switch).
     """
     class _Hooks(ida_hexrays.Hexrays_Hooks):
         def populating_popup(self, widget, handle, vu) -> int:
@@ -92,7 +92,8 @@ class BlockHighlighter(object):
         if not citem:
             return 0
         if citem.op not in (ida_hexrays.cit_if, ida_hexrays.cit_for,
-                            ida_hexrays.cit_do, ida_hexrays.cit_while):
+                            ida_hexrays.cit_do, ida_hexrays.cit_while,
+                            ida_hexrays.cit_switch):
             return 0
 
         # only update if the cursor is on an actual keyword in the current line
