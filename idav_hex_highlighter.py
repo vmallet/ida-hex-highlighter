@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022 Vincent Mallet <vmallet@gmail.com>
+# SPDX-License-Identifier: MIT
+
 """
 IDA action used to highlight code blocks in pseudocode windows.
 """
@@ -8,6 +11,8 @@ import ida_lines
 
 import lru_cache
 from idav_hex_util import map_citems_to_lines, PseudocodeHighlighter
+
+__author__ = "https://github.com/vmallet"
 
 HIGHLIGHTER_ACTION = "idav:toggle-highlighter"
 HIGHLIGHTER_TEXT = "Highlighting on/off"

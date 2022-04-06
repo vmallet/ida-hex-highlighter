@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022 Vincent Mallet <vmallet@gmail.com>
+# SPDX-License-Identifier: MIT
+
 """
 Utilities to help work with IDA Pro's Hex-Rays decompiler window.
 """
@@ -9,6 +12,8 @@ from collections import defaultdict
 from typing import Dict, Set
 
 import lucid_hexrays
+
+__author__ = "https://github.com/vmallet"
 
 
 def map_citems_to_lines(cfunc: ida_hexrays.cfunc_t) -> Dict[int, Set[int]]:

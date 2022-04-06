@@ -1,11 +1,5 @@
-import ida_pro
-from typing import Set, Dict
-
-import ida_lines
-import ida_hexrays
-
 """
-Two functions taken with gratitude (with minor modifications) from the 
+Two functions taken with gratitude (with minor modifications) from the
 Lucid project by Markus Gaasedelen.
 
 Credit: (c) 2020 Markus Gaasedelen
@@ -34,6 +28,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
+import ida_pro
+from typing import Set, Dict
+
+import ida_lines
+import ida_hexrays
 
 
 def map_line2citem(decompilation_text: ida_pro.strvec_t) -> Dict[int, Set[int]]:
