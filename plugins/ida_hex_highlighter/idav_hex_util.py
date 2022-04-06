@@ -11,7 +11,7 @@ import ida_kernwin
 from collections import defaultdict
 from typing import Dict, Set
 
-import lucid_hexrays
+from . import lucid_hexrays
 
 __author__ = "https://github.com/vmallet"
 

@@ -9,8 +9,8 @@ import ida_hexrays
 import ida_kernwin
 import ida_lines
 
-import lru_cache
-from idav_hex_util import map_citems_to_lines, PseudocodeHighlighter
+from . import lru_cache
+from .idav_hex_util import map_citems_to_lines, PseudocodeHighlighter
 
 __author__ = "https://github.com/vmallet"
 
