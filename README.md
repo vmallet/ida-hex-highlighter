@@ -2,6 +2,8 @@
 
 ## Overview
 
+![demo](images/ida-hex-highlighter-demo.gif)
+
 Hex-Rays Block Highlighter is an
 [IDA Pro](https://www.hex-rays.com/products/ida/) plugin to highlight 
 code blocks in the Hex-Rays decompiler output. 
