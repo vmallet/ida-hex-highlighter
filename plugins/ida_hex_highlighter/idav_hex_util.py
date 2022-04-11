@@ -8,13 +8,36 @@ Utilities to help work with IDA Pro's Hex-Rays decompiler window.
 import ida_hexrays
 import ida_kernwin
 
-from collections import defaultdict
-from typing import Dict, Set
+from collections import defaultdict, namedtuple
+from typing import Dict, Set, Optional
 
 from . import lucid_hexrays
 
 __author__ = "https://github.com/vmallet"
 
+OpEa = namedtuple("OpEa", ['op', 'ea'])
+"""A ctype_t op and ea_t ea pair"""
+
+def find_insn(citem, op_ea):
+    """Find a cinsn matching the given op/ea pair in the citem tree."""
+    if not op_ea:
+        return None
+
+    item = None
+
+    class ins_visitor_t(ida_hexrays.ctree_visitor_t):
+        def __init__(self):
+            super().__init__(ida_hexrays.CV_FAST | ida_hexrays.CV_INSNS)
+
+        def visit_insn(self, cinsn) -> int:
+            nonlocal item
+            if cinsn.op == op_ea.op and cinsn.ea == op_ea.ea:
+                item = cinsn
+                return 1  # Stop enumeration
+            return 0
+
+    ins_visitor_t().apply_to(citem, None)
+    return item
 
 def map_citems_to_lines(cfunc: ida_hexrays.cfunc_t) -> Dict[int, Set[int]]:
     """
@@ -59,7 +82,7 @@ class PseudocodeHighlighter(object):
         self.ui_hooks = PseudocodeHighlighter.XHook()
         self.ui_hooks.get_lines_rendering_info = self._maybe_highlight_lines
         self.lines: Set[int] = set()
-        self.current = None
+        self.op_ea: Optional[OpEa] = None
         self.bg_color = bg_color
 
     def _ensure_hooks(self):
@@ -105,7 +128,7 @@ class PseudocodeHighlighter(object):
         :param include_children: also highlight lines matching children
                                  of this item
         """
-        self.current = ci
+        self.op_ea = OpEa(ci.op, ci.ea) if ci else None
         if not ci:
             lines = PseudocodeHighlighter.NO_LINES
         else:

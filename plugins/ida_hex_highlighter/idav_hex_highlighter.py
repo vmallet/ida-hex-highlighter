@@ -10,7 +10,7 @@ import ida_kernwin
 import ida_lines
 
 from . import lru_cache
-from .idav_hex_util import map_citems_to_lines, PseudocodeHighlighter
+from .idav_hex_util import find_insn, map_citems_to_lines, PseudocodeHighlighter
 
 __author__ = "https://github.com/vmallet"
 
@@ -80,13 +80,15 @@ class BlockHighlighter(object):
         """
         if not self.enabled:
             return 0
-        current = None
+        op_ea = None
         highlighter = self.highlighters.remove(vu.cfunc.entry_ea)
         if highlighter:
-            current = highlighter.current
+            op_ea = highlighter.op_ea
             highlighter.unhook()
-        if current:
-            self._set_current(vu.cfunc, current)
+        # Try to preserve highlights across ctree refreshes
+        if op_ea:
+            current = find_insn(vu.cfunc.body, op_ea)
+            self._set_current(vu.cfunc, current, skip_refresh=True)
         return 0
 
     def _curpos(self, vu) -> int:
@@ -111,11 +113,12 @@ class BlockHighlighter(object):
         self._set_current(vu.cfunc, citem)
         return 1
 
-    def _set_current(self, cfunc, citem):
+    def _set_current(self, cfunc, citem, skip_refresh=False):
         """Set the current citem whole block is to be highlighted."""
         high = self.highlighters.get(cfunc.entry_ea, lambda: self._create_highlighter(cfunc))
         high.set_current(citem, include_children=True)
-        ida_kernwin.refresh_idaview_anyway()
+        if not skip_refresh:
+            ida_kernwin.refresh_idaview_anyway()
 
     def _create_highlighter(self, cfunc):
         """Instantiate a PseudocodeHighlighter for the given cfunc."""
