@@ -39,10 +39,13 @@ variable, and restart IDA
 ## Usage
 
 In a Pseudocode window:
-* click on a `do`, `for`, `if`, `switch`, or `while` keyword to highlight
-the corresponding block (or blocks in the `if` and `switch` cases).
-* Right-click anywhere and click the "Highlighting on/off" menu option to
-enable/disable the plugin
+* Double-click on a `do`, `for`, `if`, `switch`, or `while` keyword to 
+highlight the corresponding block (or blocks in the `if` and `switch` 
+cases).
+* Double-click the same keyword to turn the highlighting off
+* With the keyboard, navigate to a keyword and press `Shift-H` to toggle
+the highlighting on/off
+* You can also Right-Click and choose "Highlight Block (toggle)
 
 ## Authors
 
