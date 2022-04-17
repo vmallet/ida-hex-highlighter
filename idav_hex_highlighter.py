@@ -15,11 +15,13 @@ from idav_hex_util import find_insn, map_citems_to_lines, PseudocodeHighlighter
 __author__ = "https://github.com/vmallet"
 
 HIGHLIGHTER_ACTION = "idav:toggle-highlighter"
-HIGHLIGHTER_TEXT = "Highlighting on/off"
-HIGHLIGHTER_SHORTCUT = None
+HIGHLIGHTER_TEXT = "Highlight Block (toggle)"
+HIGHLIGHTER_SHORTCUT = "Shift-H"
+HIGHLIGHTER_TOOLTIP = "Toggle this block's highlighting on/off"
 
 # Number of PseudocodeHighlighters to keep cached when navigating through functions
 CACHED_HIGHLIGHTERS = 20
+
 
 class HighlighterHandler(ida_kernwin.action_handler_t):
     def __init__(self, block_highlighter):
@@ -27,10 +29,11 @@ class HighlighterHandler(ida_kernwin.action_handler_t):
         ida_kernwin.action_handler_t.__init__(self)
 
     def activate(self, ctx) -> int:
-        self.block_highlighter.toggle_enabled()
-        plugin_active = self.block_highlighter.enabled
-        print("Highlighter {}".format("ON" if plugin_active else "OFF"))
-        return 0
+        vu = ida_hexrays.get_widget_vdui(ctx.widget)
+        if not vu:
+            return 0
+
+        return self.block_highlighter.toggle_highlight(vu)
 
     # This action is only available in pseudocode widget
     def update(self, ctx):
@@ -54,7 +57,7 @@ class BlockHighlighter(object):
         def refresh_pseudocode(self, vu) -> int:
             return 0
 
-        def curpos(self, vu) -> int:
+        def double_click(self, vu, shift) -> int:
             return 0
 
     def __init__(self, *args):
@@ -65,12 +68,14 @@ class BlockHighlighter(object):
         self.hooks = BlockHighlighter._Hooks()
         self.hooks.populating_popup = self._populating_popup
         self.hooks.refresh_pseudocode = self._refresh_pseudocode
-        self.hooks.curpos = self._curpos
+        self.hooks.double_click = self._double_click
         self.enabled = True
 
     def _populating_popup(self, widget, handle, vu):
         """hex-rays callback: time to inject our action into the popup."""
-        ida_kernwin.attach_action_to_popup(vu.ct, None, HIGHLIGHTER_ACTION)
+        citem = self._get_highlightable_citem(vu)
+        if citem:
+            ida_kernwin.attach_action_to_popup(vu.ct, handle, HIGHLIGHTER_ACTION)
         return 0
 
     def _refresh_pseudocode(self, vu) -> int:
@@ -91,31 +96,53 @@ class BlockHighlighter(object):
             self._set_current(vu.cfunc, current, skip_refresh=True)
         return 0
 
-    def _curpos(self, vu) -> int:
-        """hex-rays callback: cursor position has changed."""
-        if not self.enabled:
-            return 0
+    def _get_highlightable_citem(self, vu, device=ida_hexrays.USE_KEYBOARD):
+        vu.get_current_item(device)
         citem = vu.item.it if vu.item.is_citem() else None
         if not citem:
-            return 0
+            return None
         if citem.op not in (ida_hexrays.cit_if, ida_hexrays.cit_for,
                             ida_hexrays.cit_do, ida_hexrays.cit_while,
                             ida_hexrays.cit_switch):
-            return 0
+            return None
 
         # only update if the cursor is on an actual keyword in the current line
         cpos = vu.cpos
         line = vu.cfunc.get_pseudocode()[cpos.lnnum]
         txt = ida_lines.tag_remove(line.line)
         if not 'a' <= txt[cpos.x] <= 'z':
-            return 0
+            return None
+        return citem
 
-        self._set_current(vu.cfunc, citem)
+    def toggle_highlight(self, vu, device=ida_hexrays.USE_KEYBOARD):
+        """Toggle highlighting of a block on/off.
+
+        For now, look at the current vdui's item and make a decision:
+        if it's a 'block' citem (if, for, etc), then toggle its
+        highlighting. If it's not a 'block' citem, do nothing.
+        """
+        if not self.enabled:
+            return 0
+        citem = self._get_highlightable_citem(vu, device)
+        if not citem:
+            return 0
+        self._set_current(vu.cfunc, citem, toggle=True)
         return 1
 
-    def _set_current(self, cfunc, citem, skip_refresh=False):
-        """Set the current citem whole block is to be highlighted."""
+    def _double_click(self, vu, shift) -> int:
+        """hex-rays callback: double-click! Maybe toggle highlight."""
+        return self.toggle_highlight(vu, ida_hexrays.USE_MOUSE)
+
+    def _set_current(self, cfunc, citem, skip_refresh=False, toggle=False):
+        """Set the current citem whole block is to be highlighted.
+
+        :param skip_refresh Skip the refresh_idaview_anyway() call
+        :param toggle Toggle highlight on/off if True; if False, just
+                             set it.
+        """
         high = self.highlighters.get(cfunc.entry_ea, lambda: self._create_highlighter(cfunc))
+        if toggle and high.op_ea == (citem.op, citem.ea):
+            citem = None
         high.set_current(citem, include_children=True)
         if not skip_refresh:
             ida_kernwin.refresh_idaview_anyway()
